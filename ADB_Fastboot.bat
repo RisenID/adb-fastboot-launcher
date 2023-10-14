@@ -1,6 +1,6 @@
 @echo off
 mode 78, 20
-if exist "%appdata%"\Risen\ADB\ (
+if exist "C:\Program Files\platform-tools" (
  goto :menu1  
 ) else (
   goto :menu2
@@ -11,20 +11,23 @@ if exist "%appdata%"\Risen\ADB\ (
 :menu1
 
 cls
-title  ADB and Fastboot launcher - Risen
-mode 78, 20
+title  ADB and Fastboot launcher/installer - Risen
+mode 78, 23
 
 echo:
 echo:
 echo:       ______________________________________________________________
 echo:
-echo:             [1] DOWNLOAD AND RUN LATEST
+echo:             [1] DOWNLOAD LATEST
 echo:             _____________________________________________________
 echo:
 echo:             [2] RUN LOCAL
 echo:             _____________________________________________________
 echo:
-echo:             [3] EXIT
+echo:             [3] ADD TO PATH (!!!ONLY DO THIS ONCE!!!)
+echo:             _____________________________________________________
+echo:
+echo:             [4] EXIT
 echo:       ______________________________________________________________
 echo:
 echo:
@@ -33,7 +36,8 @@ echo:            "Enter a menu option on the Keyboard [1,2,3] :"
 choice /C:123 /N
 set _erl=%errorlevel%
 
-if %_erl%==3 exit
+if %_erl%==4 exit
+if %_erl%==3 setlocal & call :path & cls & endlocal & goto :menu1
 if %_erl%==2 setlocal & call :run & cls & endlocal & goto :menu1
 if %_erl%==1 setlocal & call :download & cls & endlocal & goto :menu1
 
@@ -42,14 +46,14 @@ if %_erl%==1 setlocal & call :download & cls & endlocal & goto :menu1
 :menu2
 
 cls
-title  ADB and Fastboot launcher - Risen
+title  ADB and Fastboot launcher/installer - Risen
 mode 78, 17
 
 echo:
 echo:
 echo:       ______________________________________________________________
 echo:
-echo:             [1] DOWNLOAD AND RUN LATEST
+echo:             [1] DOWNLOAD LATEST
 echo:             _____________________________________________________
 echo:
 echo:             [2] EXIT
@@ -63,6 +67,41 @@ set _erl=%errorlevel%
 
 if %_erl%==2 exit
 if %_erl%==1 setlocal & call :download & cls & endlocal & goto :menu2
+
+::========================================================================================================================================
+
+:menu3
+
+cls
+title  ADB and Fastboot launcher/installer - Risen
+mode 78, 23
+
+echo:
+echo:               PLEASE REBOOT PC FOR CHANGES TO TAKE EFFECT
+echo:       ______________________________________________________________
+echo:
+echo:             [1] DOWNLOAD LATEST
+echo:             _____________________________________________________
+echo:
+echo:             [2] RUN LOCAL
+echo:             _____________________________________________________
+echo:
+echo:             [3] REBOOT NOW
+echo:             _____________________________________________________
+echo:
+echo:             [4] EXIT
+echo:       ______________________________________________________________
+echo:
+echo:
+echo:
+echo:            "Enter a menu option on the Keyboard [1,2,3] :"
+choice /C:123 /N
+set _erl=%errorlevel%
+
+if %_erl%==4 exit
+if %_erl%==3 shutdown /r /t 1 & shutdown /r /t 1
+if %_erl%==2 setlocal & call :run & cls & endlocal & goto :menu1
+if %_erl%==1 setlocal & call :download & cls & endlocal & goto :menu1
 
 ::========================================================================================================================================
 
@@ -83,7 +122,7 @@ powershell -c "Invoke-WebRequest -Uri 'https://dl.google.com/android/repository/
 @echo off
 setlocal
 cd /d %~dp0
-Call :UnZipFile "%appdata%\Risen\ADB\" "%appdata%\Risen\ADB\tmp\platform-tools-latest-windows.zip"
+Call :UnZipFile "C:\Program Files\" "%appdata%\Risen\ADB\tmp\platform-tools-latest-windows.zip"
 exit /b
 
 :UnZipFile <ExtractTo> <newzipfile>
@@ -101,12 +140,22 @@ if exist %vbs% del /f /q %vbs%
 cscript //nologo %vbs%
 if exist %vbs% del /f /q %vbs%
 rmdir "%appdata%"\Risen\ADB\tmp\ /s /q
-goto :run
+goto :menu1
 
 ::========================================================================================================================================
 
 :run
-start /d "%appdata%"\Risen\ADB\platform-tools
+start /d "C:\Program Files\platform-tools"
 exit
+
+::========================================================================================================================================
+
+:path
+REM usage: append_user_path "path"
+SET Key="HKCU\Environment"
+FOR /F "usebackq tokens=2*" %%A IN (`REG QUERY %Key% /v PATH`) DO Set CurrPath=%%B
+ECHO %CurrPath% > user_path_bak.txt
+SETX PATH "%CurrPath%";"C:\Program Files\platform-tools"
+goto :menu3
 
 ::========================================================================================================================================
