@@ -24,7 +24,7 @@ echo:
 echo:             [2] RUN LOCAL
 echo:             _____________________________________________________
 echo:
-echo:             [3] ADD TO PATH (!!!ONLY DO THIS ONCE!!!)
+echo:             [3] ADD TO PATH (Requires Admin)
 echo:             _____________________________________________________
 echo:
 echo:             [4] EXIT
@@ -37,7 +37,7 @@ choice /C:123 /N
 set _erl=%errorlevel%
 
 if %_erl%==4 exit
-if %_erl%==3 setlocal & call :path & cls & endlocal & goto :menu1
+if %_erl%==3 setlocal & call :elevation & cls & endlocal & goto :menu1
 if %_erl%==2 setlocal & call :run & cls & endlocal & goto :menu1
 if %_erl%==1 setlocal & call :download & cls & endlocal & goto :menu1
 
@@ -150,12 +150,95 @@ exit
 
 ::========================================================================================================================================
 
+:elevation
+@setlocal DisableDelayedExpansion
+@echo off
+
+set "nul=>nul 2>&1"
+set psc=powershell.exe
+set "nceline=echo: &echo ==== ERROR ==== &echo:"
+
+::========================================================================================================================================
+
+::  Fix for the special characters limitation in path name
+
+set "_work=%~dp0"
+if "%_work:~-1%"=="\" set "_work=%_work:~0,-1%"
+
+set "_batf=%~f0"
+set "_batp=%_batf:'=''%"
+
+set _PSarg="""%~f0""" -el %_args%
+
+set "_ttemp=%temp%"
+
+setlocal EnableDelayedExpansion
+
+::========================================================================================================================================
+
+::  Elevate script as admin and pass arguments and preventing loop
+
+%nul% reg query HKU\S-1-5-19 || (
+if not defined _elev %nul% %psc% "start cmd.exe -arg '/c \"!_PSarg:'=''!\"' -verb runas" && call :exit
+%nceline%
+echo This script require administrator privileges.
+echo To do so, right click on this script and select 'Run as administrator'.
+setlocal & call :oofed & cls & endlocal & goto :oofed
+)
+
+::========================================================================================================================================
+
 :path
 REM usage: append_user_path "path"
 SET Key="HKCU\Environment"
 FOR /F "usebackq tokens=2*" %%A IN (`REG QUERY %Key% /v PATH`) DO Set CurrPath=%%B
 ECHO %CurrPath% > user_path_bak.txt
-SETX PATH "%CurrPath%";"C:\Program Files\platform-tools"
-goto :menu3
+
+echo.%CurrPath% | findstr /C:"platform-tools" 1>nul
+
+if errorlevel 1 (
+  echo. got one - pattern not found
+  SETX PATH "%CurrPath%";"C:\Program Files\platform-tools"
+  goto :menu3
+) ELSE (
+  echo. got zero - found pattern
+  goto :error
+)
+
+::========================================================================================================================================
+
+:error
+
+cls
+title  Error - Risen
+mode 78, 17
+
+echo:
+echo:
+echo:       ______________________________________________________________
+echo:
+echo:             ADB and Fastboot are already in the system PATH
+echo:       ______________________________________________________________
+echo:
+echo:
+echo:
+
+pause
+call :menu1 & cls & endlocal & goto :error
+
+::========================================================================================================================================
+
+:exit
+exit
+exit /b
+
+::========================================================================================================================================
+
+:oofed
+echo:
+if %_unattended%==1 timeout /t 2 & exit /b
+ "Press any key to exit..."
+pause >nul
+exit /b
 
 ::========================================================================================================================================
